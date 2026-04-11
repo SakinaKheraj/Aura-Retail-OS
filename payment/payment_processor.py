@@ -1,3 +1,9 @@
+# ============================================================
+# FILE: payment/payment_processor.py
+# MEMBER: Sakina [202512046]
+# PATTERN: Adapter (FULLY IMPLEMENTED)
+# STATUS: Complete (Subtask 2)
+# ============================================================
 
 from abc import ABC, abstractmethod
 
@@ -16,7 +22,7 @@ class PaymentGateway(ABC):
     """
     Target interface for the Adapter pattern.
 
-    Every payment provider - credit card, UPI, wallet -
+    Every payment provider — credit card, UPI, wallet —
     must be adapted to this interface.
 
     The kiosk calls:
@@ -139,4 +145,4 @@ class WalletService:
 
     def get_balance(self, wallet_id: str) -> float:
         """Get current wallet balance."""
-        return 5000.0   
+        return 5000.0   # mock value

@@ -1,4 +1,11 @@
-from payment.payment_processor import (
+# ============================================================
+# FILE: payment/adapters.py
+# MEMBER: Sakina [202512046]
+# PATTERN: Adapter (FULLY IMPLEMENTED)
+# STATUS: Complete (Subtask 2)
+# ============================================================
+
+from .payment_processor import (
     PaymentGateway,
     CreditCardAPI,
     UPISystem,
