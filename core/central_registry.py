@@ -9,6 +9,9 @@ class CentralRegistry:
     Singleton — only one instance exists across the whole system.
     Stores global config (city name, version, kiosk settings)
     and system-wide status.
+    
+    Singleton class that maintains global system configuration
+    and operational status for all kiosks.
 
     TODO (Final Submission):
     - Load config from persistence/config.json on startup
