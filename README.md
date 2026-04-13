@@ -17,7 +17,11 @@
 To see the system in action, watch the interactive simulation below:
 
 <p align="center">
-  <img src="demo.gif" width="700" alt="Aura Retail OS Demo" />
+  
+
+https://github.com/user-attachments/assets/63ec6d31-8efd-43ed-b906-830b45104676
+
+
 </p>
 
 
