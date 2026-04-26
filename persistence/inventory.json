@@ -1,0 +1,30 @@
+{
+  "MED-01": {
+    "name": "Aspirin 100mg",
+    "price": 50.0,
+    "quantity": 100,
+    "requires_refrigeration": false,
+    "is_essential": true
+  },
+  "MED-02": {
+    "name": "Gauze Bandage",
+    "price": 120.0,
+    "quantity": 50,
+    "requires_refrigeration": false,
+    "is_essential": true
+  },
+  "MED-03": {
+    "name": "Insulin Vial",
+    "price": 2500.0,
+    "quantity": 10,
+    "requires_refrigeration": true,
+    "is_essential": false
+  },
+  "BND-01": {
+    "name": "Emergency Relief Kit",
+    "price": 2670.0,
+    "quantity": 10,
+    "requires_refrigeration": false,
+    "is_essential": false
+  }
+}
