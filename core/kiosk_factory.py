@@ -5,64 +5,79 @@
 # STATUS: Skeleton (Subtask 2)
 # ============================================================
 
-from .kiosk import PharmacyKiosk, FoodKiosk, EmergencyReliefKiosk
-from hardware.dispenser import SpiralDispenser, RoboticArmDispenser
+from abc import ABC, abstractmethod
+from .kiosk import Kiosk, PharmacyKiosk, FoodKiosk, EmergencyReliefKiosk
+from hardware.dispenser import SpiralDispenser, RoboticArmDispenser, ConveyorDispenser
 from inventory.inventory_manager import InventoryManager
 from inventory.product import InventoryAccessProxy
 
 
+class AbstractKioskFactory(ABC):
+    """
+    Abstract Factory interface.
+    Each concrete factory creates compatible components for a specific kiosk type.
+    """
+    @abstractmethod
+    def create_kiosk(self, kiosk_id: str, location: str) -> Kiosk:
+        pass
+
+    @abstractmethod
+    def create_dispenser(self):
+        pass
+
+
+class PharmacyKioskFactory(AbstractKioskFactory):
+    def create_kiosk(self, kiosk_id: str, location: str) -> PharmacyKiosk:
+        return PharmacyKiosk(kiosk_id, location)
+
+    def create_dispenser(self):
+        return RoboticArmDispenser()
+
+
+class FoodKioskFactory(AbstractKioskFactory):
+    def create_kiosk(self, kiosk_id: str, location: str) -> FoodKiosk:
+        return FoodKiosk(kiosk_id, location)
+
+    def create_dispenser(self):
+        return SpiralDispenser()
+
+
+class EmergencyKioskFactory(AbstractKioskFactory):
+    def create_kiosk(self, kiosk_id: str, location: str) -> EmergencyReliefKiosk:
+        return EmergencyReliefKiosk(kiosk_id, location)
+
+    def create_dispenser(self):
+        return ConveyorDispenser()
+
+
 class KioskFactory:
     """
-    Factory that creates kiosk objects with all compatible components.
-
-    Responsibilities:
-    - Create the correct Kiosk subclass
-    - Create the correct Dispenser for that kiosk type
-    - Create an InventoryManager wrapped in an InventoryAccessProxy
-    - Wire everything together via kiosk.initialize()
-
-    TODO (Final Submission):
-    - Split into separate factory subclasses:
-        PharmacyKioskFactory, FoodKioskFactory, EmergencyKioskFactory
-    - Each subclass creates its own PricingModule and VerificationModule
-    - Register created kiosk in CentralRegistry
+    High-level factory that uses the Abstract Factory pattern to build kiosks.
     """
 
     @staticmethod
     def create_kiosk(kiosk_type: str, kiosk_id: str, location: str, payment_gateway):
-        """
-        Create and return a fully initialized kiosk.
+        # build the concrete factory
+        if kiosk_type == "pharmacy":
+            factory = PharmacyKioskFactory()
+        elif kiosk_type == "food":
+            factory = FoodKioskFactory()
+        elif kiosk_type == "emergency":
+            factory = EmergencyKioskFactory()
+        else:
+            raise ValueError(f"Unknown kiosk type: {kiosk_type}")
 
-        Args:
-            kiosk_type:      'pharmacy' | 'food' | 'emergency'
-            kiosk_id:        unique string ID (e.g. 'K001')
-            location:        human-readable location string
-            payment_gateway: any PaymentGateway adapter instance
-
-        Returns:
-            Initialized Kiosk instance with all subsystems wired up
-        """
-        # Build inventory subsystem (same for all kiosk types in Subtask 2)
+        # create components
+        kiosk = factory.create_kiosk(kiosk_id, location)
+        dispenser = factory.create_dispenser()
+        
+        # build inventory subsystem (Proxy)
         manager = InventoryManager()
+        manager.load_from_json() # Load state if exists
         proxy = InventoryAccessProxy(manager, authorized_roles=["admin", "user"])
 
-        # Select kiosk type and matching dispenser
-        if kiosk_type == "pharmacy":
-            kiosk = PharmacyKiosk(kiosk_id, location)
-            dispenser = RoboticArmDispenser()   # precise, for medication
-
-        elif kiosk_type == "food":
-            kiosk = FoodKiosk(kiosk_id, location)
-            dispenser = SpiralDispenser()       # standard vending coil
-
-        elif kiosk_type == "emergency":
-            kiosk = EmergencyReliefKiosk(kiosk_id, location)
-            dispenser = SpiralDispenser()
-
-        else:
-            raise ValueError(f"[KioskFactory] Unknown kiosk type: '{kiosk_type}'")
-
-        # Wire all subsystems into the kiosk
+        # wire everything
         kiosk.initialize(dispenser, proxy, payment_gateway)
-        print(f"[KioskFactory] Created '{kiosk_type}' kiosk '{kiosk_id}' at '{location}'")
+        print(f"[KioskFactory] Created {kiosk_type} kiosk '{kiosk_id}' with {dispenser.get_type()}")
+        
         return kiosk
