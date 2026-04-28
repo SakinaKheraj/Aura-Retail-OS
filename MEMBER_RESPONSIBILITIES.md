@@ -1,36 +1,53 @@
-# Member Responsibilities — Aura Retail OS
+# Team Contributions — Aura Retail OS
 
-This document outlines the subsystem ownership and implementation responsibilities for each team member in Group 28.
+**IT620 Object Oriented Programming · Path B · Project v2.0**
 
-### 1. Kalagi [202512037] — Kiosk Core & Facade
-**Subsystems**: `core/`
-- **Responsibilities**:
-    - Implementation of `Kiosk` abstract base and concrete subclasses (`PharmacyKiosk`, `FoodKiosk`, `EmergencyReliefKiosk`).
-    - Development of the **Facade Pattern** via `KioskInterface` to simplify high-level operations.
-    - Implementation of the **Singleton Pattern** for `CentralRegistry`.
-    - Coordination of subsystem communication via the `KioskFactory` (**Abstract Factory Pattern**).
-    - Designing the system-wide command structure (**Command Pattern**) for operations like purchase and refund.
+---
 
-### 2. Digvijay [202512008] — Inventory System & Security
-**Subsystems**: `inventory/`
-- **Responsibilities**:
-    - Implementation of the **Composite Pattern** for `Product` and `ProductBundle` to handle nested item structures.
-    - Development of the `InventoryManager` for stock tracking and persistence.
-    - Implementation of the **Proxy Pattern** (`InventoryAccessProxy`) to secure all access to the inventory layer.
-    - Handling derived stock computations and ensuring inventory consistency during transactions.
+## Kalagi · 202512037 — System Architect
+**Patterns: Abstract Factory, Singleton, Facade**
 
-### 3. Sakina [202512046] — Payment System
-**Subsystems**: `payment/`
-- **Responsibilities**:
-    - Designing the unified `PaymentGateway` interface.
-    - Implementing the **Adapter Pattern** for various third-party providers (`UPIAdapter`, `CreditCardAdapter`, `WalletAdapter`).
-    - Ensuring atomic behavior in transactions (payment verification followed by dispensing confirmation).
-    - Managing transaction validation states and error handling during payment processing.
+- Designed `AbstractKioskFactory` and concrete factories for Pharmacy, Food, and Emergency kiosks. Each factory guarantees compatible hardware pairing at boot — no mismatched components.
+- Built `CentralRegistry` (Singleton) to hold one authoritative city-wide state, ensuring emergency mode broadcasts reach all active kiosk instances consistently.
+- Implemented `KioskInterface` (Facade) as the single entry point for the simulation layer, hiding the internal complexity of commands, hardware, and inventory behind a clean API.
+- Established the core system kernel and wiring between all modules.
 
-### 4. Aayushi [202512101] — Hardware & Modular Platform
-**Subsystems**: `hardware/`
-- **Responsibilities**:
-    - Designing the `Dispenser` interface and its variants using the **Bridge Pattern** to decouple logic from hardware.
-    - Developing optional hardware modules (`RefrigerationModule`, `SolarMonitoringModule`, `NetworkModule`).
-    - Implementing the **Decorator Pattern** to allow dynamic attachment of these modules at runtime without modifying kiosk code.
-    - Handling hardware-level constraints (e.g., blocking products if refrigeration is required but unavailable).
+---
+
+## Digvijay · 202512008 — Inventory & Security Lead
+**Patterns: Composite, Proxy**
+
+- Built the `ProductComponent` hierarchy (Composite) so individual items and product bundles share one interface. Price totals and stock checks recurse through the tree without any special-casing.
+- Implemented recursive price and stock calculations for nested composite objects.
+- Developed `InventoryAccessProxy` to intercept all inventory operations, enforce role-based access (user vs. admin), and apply emergency purchase caps before anything reaches the real inventory.
+- Integrated the JSON persistence layer so inventory state is saved and restored across sessions.
+
+---
+
+## Aayushi · 202512101 — Hardware HAL Lead
+**Patterns: Bridge, Decorator**
+
+- Architected the Hardware Abstraction Layer using the Bridge pattern, separating kiosk logic from motor implementations (Robotic Arm, Conveyor Belt, Spiral). Dispensers can be swapped without changing any business logic.
+- Built the runtime upgrade system using Decorators. Attaching a Refrigeration, Solar, or Network module wraps the existing kiosk object — the base kiosk is never modified.
+- Implemented health check and status reporting for all hardware components, including the OFFLINE state surfaced during emergency mode.
+
+---
+
+## Sakina · 202512046 — Payment & Transaction Lead
+**Patterns: Adapter, Command**
+
+- Implemented Adapters for UPI, Credit Card, and Digital Wallet APIs, unifying three incompatible vendor interfaces behind a single `PaymentGateway`. Adding a new payment method requires only a new adapter.
+- Developed the Command pattern for transactions — each purchase is a self-contained, reversible object encapsulating payment, inventory change, and dispenser action.
+- Engineered the multi-level undo and rollback mechanism: a single `undo()` call atomically reverts both payment and stock, with no partial states.
+- Built the CSV-based audit trail logging every command execution and rollback.
+
+---
+
+## Pattern Ownership
+
+| Member | Creational | Structural | Behavioural |
+|:---|:---|:---|:---|
+| Kalagi | Abstract Factory | Facade | Singleton |
+| Digvijay | — | Composite, Proxy | — |
+| Aayushi | — | Bridge, Decorator | — |
+| Sakina | — | Adapter | Command |
