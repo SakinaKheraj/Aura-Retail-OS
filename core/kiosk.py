@@ -48,7 +48,14 @@ class Kiosk(ABC):
         """Default True. Overridden by Network Module."""
         return True
 
+    # ✅ SAFE IMPROVEMENT HERE
     def set_mode(self, mode: str):
+        valid_modes = {"ACTIVE", "POWER_SAVING", "MAINTENANCE", "EMERGENCY"}
+
+        if mode not in valid_modes:
+            print(f"[Kiosk {self.kiosk_id}] Invalid mode '{mode}'. Keeping current mode '{self.mode}'.")
+            return
+
         self.mode = mode
         print(f"[Kiosk {self.kiosk_id}] Mode set to {mode}")
 
@@ -124,7 +131,7 @@ class KioskInterface:
             return False
 
         # Access inventory via proxy - role check only
-        internal_mgr = self._kiosk.inventory_manager._manager # check existence directly to avoid proxy log flood
+        internal_mgr = self._kiosk.inventory_manager._manager
         item = internal_mgr.get_product(product_id)
         if not item:
             print(f"\033[91m  [CRITICAL] Error: Product '{product_id}' not found.\033[0m")
@@ -141,7 +148,6 @@ class KioskInterface:
 
         # Mode-specific logic (Emergency Limit for Essentials)
         if self._registry.get("emergency_mode"):
-            # Limit applied to Emergency Kiosks or any Essential product in Emergency Mode
             if isinstance(self._kiosk, EmergencyReliefKiosk) or getattr(item, "is_essential", False):
                 if quantity > getattr(self._kiosk, "emergency_limit", 2):
                     actual_limit = getattr(self._kiosk, "emergency_limit", 2)
@@ -150,7 +156,6 @@ class KioskInterface:
 
         # Path B Constraint: Hardware Dependency (Network)
         if not self._kiosk.is_online():
-            # If offline, only basic payment allowed (simulated as UPI being disabled)
             from payment.adapters import UPIAdapter
             if isinstance(self._kiosk.payment_gateway, UPIAdapter):
                 print(f"\033[93m  [SECURITY] OFFLINE: UPI payment unavailable. Please use physical card or cash.\033[0m")
@@ -158,7 +163,6 @@ class KioskInterface:
 
         if isinstance(self._kiosk, PharmacyKiosk):
             print(f"\033[94m  [Verification] Verifying prescription for user {user_id}...\033[0m")
-            # Simulate verification
             time.sleep(0.5)
             print("\033[92m  [Verification] Prescription VALID.\033[0m")
 
@@ -174,16 +178,10 @@ class KioskInterface:
         return self._invoker.execute_command(cmd)
 
     def refund_transaction(self, transaction_id: str):
-        """
-        Refund routed through Command pattern.
-        """
         cmd = RefundCommand(self._kiosk, transaction_id)
         self._invoker.execute_command(cmd)
 
     def run_diagnostics(self) -> str:
-        """
-        Hardware diagnostics check.
-        """
         print(f"\n[KioskInterface] Initiating System Diagnostics for {self._kiosk.kiosk_id}...")
         
         disp_ok = self._kiosk.dispenser.get_type() is not None
@@ -199,12 +197,8 @@ class KioskInterface:
         return status
 
     def restock_inventory(self, product_id: str, quantity: int):
-        """
-        Restock routed through Command pattern.
-        """
         cmd = RestockCommand(self._kiosk, product_id, quantity)
         self._invoker.execute_command(cmd)
 
     def undo_last_operation(self):
-        """Rollback support."""
         self._invoker.undo_last()
