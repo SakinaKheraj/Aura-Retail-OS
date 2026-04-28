@@ -1,36 +1,146 @@
-# Testing Guide — Aura Retail OS
+# Testing & Validation Guide — Aura Retail OS
 
-Follow these steps to test all design patterns in the interactive CLI.
+**IT620 Object Oriented Programming · Path B · Project v2.0**
 
-### 1. Initialize the System
-- **Command**: Choose `1` (Initialize/Reset Kiosk).
-- **Sub-command**: Choose `1` (Pharmacy Kiosk).
-- **Pattern**: **Factory Pattern** creates the specific kiosk and injecting sub-systems.
+Run `python simulation.py` and follow each scenario in order. Each scenario targets a specific pattern and has a clear pass/fail condition.
 
-### 2. Upgrade Hardware
-- **Command**: Choose `2` (Upgrade Hardware Modules).
-- **Sub-command**: Choose `1` (Refrigeration Module).
-- **Pattern**: **Decorator Pattern** wraps the existing kiosk object at runtime to add cooling capabilities.
+---
 
-### 3. Verify Composite Inventory
-- **Command**: Choose `3` (View Inventory Tree).
-- **Observation**: Look for `BND-01` (Emergency Relief Kit). Note how its total price (₹2670.00) is automatically calculated from its children (Aspirin, Bandage, Insulin).
-- **Pattern**: **Composite Pattern** allows treating bundles and products through the same `get_price()` interface.
+## Scenario A — Hardware Consistency (Abstract Factory)
 
-### 4. Test Adapter Pattern (Unified Payment)
-- **Command**: Choose `4` (Purchase Item).
-- **ID**: `MED-01`.
-- **Quantity**: `2`.
-- **Payment**: Choose `2` (Credit Card).
-- **Observation**: The system successfully uses a different API call (CreditCardAPI) without changing the `purchase_item` logic.
-- **Pattern**: **Adapter Pattern** translates the unified interface to heterogeneous payment providers.
+**Goal:** Confirm that each kiosk type is automatically paired with the correct dispenser at boot.
 
-### 5. Check System Constraints
-- **Command**: Choose `4` (Purchase Item).
-- **ID**: `MED-03` (Insulin).
-- **Quantity**: `99` (Exceeds stock of 10).
-- **Observation**: The system denies the request, demonstrating **Derived Attribute** calculation (Available Stock).
+**Steps:**
+1. Select `[1] Reset` → `[1] Pharmacy Kiosk`
 
-### 6. Diagnostics & Shutdown
-- **Command**: Choose `5` to run diagnostics (**Facade Pattern** simplifies complexity).
-- **Command**: Choose `0` to shutdown (**Persistence Manager** saves state to `inventory.json`).
+**Expected output:**
+```
+[KioskFactory] Created pharmacy kiosk 'K-1001' with RoboticArmDispenser
+```
+
+**Pass condition:** The log shows `RoboticArmDispenser` — not a Spiral or Conveyor. The factory selected a high-precision dispenser automatically based on kiosk type.
+
+**Pattern verified:** Abstract Factory
+
+---
+
+## Scenario B — Hardware Dependency Enforcement (Bridge + Decorator)
+
+**Goal:** Confirm that a product requiring specific hardware is blocked until that hardware is attached.
+
+**Steps:**
+1. Select `[4] Purchase` → `MED-03 (Insulin)`
+2. Observe the denial.
+3. Select `[2] Upgrade` → `[1] Refrigeration`
+4. Select `[4] Purchase` → `MED-03 (Insulin)` again
+
+**Expected output (step 2):**
+```
+[SAFETY] DENIED — Insulin Vial requires refrigeration, but NO COOLING MODULE is attached.
+```
+
+**Expected output (step 4):**
+```
+[SAFETY] Temperature Check: OK
+```
+
+**Pass condition:** Purchase is blocked before the upgrade and succeeds after. The base kiosk class is unchanged — only its decorator wrapper changes.
+
+**Pattern verified:** Decorator (runtime capability extension), Bridge (kiosk logic isolated from dispenser type)
+
+---
+
+## Scenario C — Atomic Rollback (Command Pattern)
+
+**Goal:** Confirm that undoing a transaction fully restores both payment and inventory with no partial state.
+
+**Steps:**
+1. Select `[4] Purchase` → `MED-01 (Aspirin)` — note the stock count (e.g. 100 → 99)
+2. Select `[5] Undo Last Transaction`
+3. Select `[3] View Inventory` — check the stock count
+
+**Expected output (step 2):**
+```
+[CommandInvoker] Rolling back...
+[CreditCardAdapter] Refunding ₹50.00...
+[Inventory] Stock restored: MED-01 → 100
+```
+
+**Pass condition:** Stock returns to its original value. Payment is refunded. No orphaned state remains.
+
+**Pattern verified:** Command
+
+---
+
+## Scenario D — Network Failure & Payment Fallback (Adapter)
+
+**Goal:** Confirm that individual payment adapters respond correctly to network status, and that a fallback adapter works independently.
+
+**Steps:**
+1. Select `[2] Upgrade` → `[3] Network Unit` — note it initializes as OFFLINE
+2. Select `[4] Purchase` → payment method `[1] UPI`
+3. Observe the block.
+4. Retry with payment method `[2] Credit Card`
+
+**Expected output (step 2):**
+```
+[SECURITY] OFFLINE — UPI payment unavailable. Please use physical card or cash.
+```
+
+**Expected output (step 4):** Purchase completes successfully.
+
+**Pass condition:** UPI is blocked; Credit Card succeeds. Each adapter independently checks system state — the gateway interface is identical for both.
+
+**Pattern verified:** Adapter
+
+---
+
+## Scenario E — Emergency Mode Restrictions (Singleton + Proxy)
+
+**Goal:** Confirm that toggling emergency mode applies city-wide purchase limits consistently.
+
+**Steps:**
+1. Select `[6] Toggle Emergency Mode`
+2. Select `[4] Purchase` → `MED-01 (Aspirin)` → enter quantity `5`
+
+**Expected output:**
+```
+[EMERGENCY LIMIT] Maximum 2 units per transaction during emergency mode.
+```
+
+**Pass condition:** Quantity is capped at 2 regardless of input. The limit is enforced by the Proxy before the request reaches inventory. The Singleton ensures this state is consistent across all kiosk instances.
+
+**Pattern verified:** Singleton (city-wide state broadcast), Proxy (restriction enforcement)
+
+---
+
+## Scenario F — System Diagnostics (Facade)
+
+**Goal:** Confirm that a single API call triggers a full multi-subsystem health check.
+
+**Steps:**
+1. Select `[7] Diagnostics`
+
+**Expected output:**
+```
+[Diagnostics] Dispenser:  OK
+[Diagnostics] Inventory:  OK
+[Diagnostics] Payment:    OK
+```
+
+**Pass condition:** All three subsystems are reported in one call. No internal subsystem logic is exposed to the caller.
+
+**Pattern verified:** Facade
+
+---
+
+## Quick Reference
+
+| Scenario | Pattern(s) Tested | Pass Condition |
+|:---|:---|:---|
+| A | Abstract Factory | Correct dispenser auto-selected at boot |
+| B | Bridge, Decorator | Purchase blocked without module; passes after attachment |
+| C | Command | Full rollback restores both payment and stock |
+| D | Adapter | UPI blocked offline; Credit Card succeeds independently |
+| E | Singleton, Proxy | Quantity capped at 2 under emergency mode |
+| F | Facade | Single call returns health status of all subsystems |
