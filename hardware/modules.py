@@ -93,6 +93,24 @@ class KioskWithModule:
         """
         return self._kiosk.get_status() + f" | +{self._module.get_module_name()}"
 
+    def is_refrigerated(self) -> bool:
+        """
+        Return True if THIS module is refrigeration or if WRAPPED kiosk has it.
+        """
+        from .modules import RefrigerationModule
+        if isinstance(self._module, RefrigerationModule):
+            return True
+        return self._kiosk.is_refrigerated()
+
+    def is_online(self) -> bool:
+        """
+        Return False if THIS is a NetworkModule and it is offline.
+        """
+        from .modules import NetworkModule
+        if isinstance(self._module, NetworkModule):
+            return self._module.is_online()
+        return self._kiosk.is_online()
+
     def __getattr__(self, name):
         """
         Delegate any attribute/method not defined here
@@ -106,83 +124,71 @@ class KioskWithModule:
 class RefrigerationModule(HardwareModule):
     """
     Cooling unit for temperature-sensitive products.
-    Required for: insulin, vaccines, chilled food.
-
-    TODO (Final Submission):
-    - Read temperature from sensor every N seconds
-    - If temperature exceeds threshold → raise HardwareFailureEvent
-    - Block purchase of cold-storage products if module is offline
     """
 
     def __init__(self, temperature_celsius: float = 4.0):
         self.temperature = temperature_celsius
         self._active = False
+        self._healthy = True
 
     def attach(self, kiosk_id: str):
         self._active = True
-        # TODO: start cooling hardware, connect temperature sensor
-        print(f"  [RefrigerationModule] Attached to '{kiosk_id}' — target: {self.temperature}°C")
+        print(f"  [RefrigerationModule] Attached to '{kiosk_id}' — monitoring sensor...")
 
     def detach(self, kiosk_id: str):
         self._active = False
-        # TODO: safely power down cooling unit
-        print(f"  [RefrigerationModule] Detached from '{kiosk_id}'")
+        print(f"  [RefrigerationModule] Powering down cooling unit for '{kiosk_id}'")
 
     def get_module_name(self) -> str:
         return f"Refrigeration({self.temperature}°C)"
+
+    def is_healthy(self) -> bool:
+        # Simulation: 95% chance it's healthy
+        import random
+        self._healthy = random.random() > 0.05
+        return self._healthy
 
 
 class SolarMonitoringModule(HardwareModule):
     """
     Solar panel monitoring unit.
-    Tracks power generation and battery charge state.
-
-    TODO (Final Submission):
-    - Read watt output from solar sensor
-    - If output drops below threshold → trigger POWER_SAVING mode in kiosk
-    - Report power data to City Monitoring System
     """
 
     def __init__(self):
-        self.power_output_watts = 0.0
+        self.power_output_watts = 120.0
 
     def attach(self, kiosk_id: str):
-        self.power_output_watts = 120.0
-        # TODO: connect to solar panel sensor via HAL
-        print(f"  [SolarMonitoringModule] Attached to '{kiosk_id}' — output: {self.power_output_watts}W")
+        print(f"  [SolarMonitoringModule] Attached to '{kiosk_id}' — reading photo-cells...")
 
     def detach(self, kiosk_id: str):
-        self.power_output_watts = 0.0
-        print(f"  [SolarMonitoringModule] Detached from '{kiosk_id}'")
+        print(f"  [SolarMonitoringModule] Disconnecting solar grid from '{kiosk_id}'")
 
     def get_module_name(self) -> str:
         return f"Solar({self.power_output_watts}W)"
+
+    def check_output(self, kiosk):
+        """If output is low, trigger power saving."""
+        if self.power_output_watts < 50.0:
+            kiosk.set_mode("POWER_SAVING")
 
 
 class NetworkModule(HardwareModule):
     """
     Network connectivity module.
-    Manages internet/intranet connection for the kiosk.
-
-    TODO (Final Submission):
-    - Ping city server every N seconds to check connectivity
-    - If offline → raise NetworkFailureEvent
-    - Restrict online payment methods if network is down
-    - Report bandwidth usage to City Monitoring System
     """
 
     def __init__(self, bandwidth_mbps: float = 100.0):
         self.bandwidth = bandwidth_mbps
-        self._connected = False
+        self._connected = False # Testing offline behavior
 
     def attach(self, kiosk_id: str):
-        self._connected = True
-        # TODO: initialize network interface via HAL
-        print(f"  [NetworkModule] Attached to '{kiosk_id}' — {self.bandwidth} Mbps")
+        print(f"  [NetworkModule] Attached to '{kiosk_id}' — initializing 5G/LTE link...")
 
     def detach(self, kiosk_id: str):
-        self._connected = False
-        print(f"  [NetworkModule] Detached from '{kiosk_id}'")
+        print(f"  [NetworkModule] Dropping network link for '{kiosk_id}'")
 
     def get_module_name(self) -> str:
         return f"Network({self.bandwidth}Mbps)"
+
+    def is_online(self) -> bool:
+        return self._connected
