@@ -1,14 +1,5 @@
 <div align="center">
 
-```
- █████╗ ██╗   ██╗██████╗  █████╗     ██████╗ ███████╗
-██╔══██╗██║   ██║██╔══██╗██╔══██╗   ██╔═══██╗██╔════╝
-███████║██║   ██║██████╔╝███████║   ██║   ██║███████╗
-██╔══██║██║   ██║██╔══██╗██╔══██║   ██║   ██║╚════██║
-██║  ██║╚██████╔╝██║  ██║██║  ██║   ╚██████╔╝███████║
-╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝    ╚═════╝ ╚══════╝
-```
-
 ### Autonomous Smart-City Retail Infrastructure
 
 **IT620 — Object Oriented Programming · Path B: Modular Hardware Platform**
@@ -21,6 +12,12 @@
 *Governing the kiosks of Zephyrus — one design pattern at a time.*
 
 </div>
+
+---
+
+## 📺 Project Demonstration
+
+![Aura Retail OS Demo](file:///c:/Users/khera\OneDrive/Desktop/DAU/sem-2/OOP/Aura%20Retail%20OS/Aura-demo.mp4)
 
 ---
 
@@ -45,8 +42,10 @@ Nine industry-standard design patterns work in concert to form the Aura OS backb
 | **Proxy** | Operational Security | Intercepts all inventory access to enforce role-based permissions and emergency-mode restrictions before they reach the real inventory. |
 | **Adapter** | Payment Integration | Provides a single, unified payment interface over three incompatible vendor APIs — UPI, Credit Card, and Wallet — with zero coupling. |
 | **Command** | Transaction Management | Wraps every purchase as a reversible command object, enabling full atomic rollback of payment and inventory in a single undo operation. |
+| **Strategy** | Dynamic Pricing | Allows the system to switch between Standard and Emergency pricing strategies at runtime based on the city's operational status. |
 | **Facade** | Public API | Presents a clean `KioskInterface` to the simulation layer, hiding the complexity of all subsystems behind a minimal surface area. |
 | **Singleton** | City Registry | Maintains a single, globally consistent city state object used to broadcast emergency mode across all active kiosk instances simultaneously. |
+
 
 ---
 
@@ -55,82 +54,58 @@ Nine industry-standard design patterns work in concert to form the Aura OS backb
 Run `python simulation.py` and follow these scenarios to observe all major system capabilities.
 
 ### Scenario 1 — System Boot via Abstract Factory
-
 ```
 Menu → [1] Reset System → [1] Pharmacy Kiosk
 ```
+The Abstract Factory initializes the Pharmacy Kiosk and automatically pairs it with a **Robotic Arm Dispenser**.
 
-The Abstract Factory initializes the Pharmacy Kiosk and automatically pairs it with a **Robotic Arm Dispenser** — the only dispenser type compatible with precise pharmaceutical dispensing. Incompatible hardware combinations are rejected at the factory level.
-
----
-
-### Scenario 2 — Hardware Dependency Enforcement (Path B Core Logic)
-
+### Scenario 2 — Hardware Dependency (Path B Core)
 ```
 Menu → [4] Purchase → MED-03 (Insulin)
 ```
-> ❌ **DENIED** — No Cooling Module detected. Insulin requires refrigeration.
+❌ **DENIED** — Insulin requires refrigeration, but NO COOLING MODULE is attached.
 
+### Scenario 3 — Atomic Rollback
 ```
-Menu → [2] Upgrade Hardware → [1] Refrigeration Module
-Menu → [4] Purchase → MED-03 (Insulin)
-```
-> ✅ **SUCCESS** — The Decorator wraps the kiosk with a `RefrigeratedKiosk`, and the temperature pre-check now passes.
-
-This scenario demonstrates the Decorator and Bridge patterns working together: the hardware wrapper adds new *capability*, while the underlying dispenser logic remains unchanged.
-
----
-
-### Scenario 3 — Atomic Rollback via Command Pattern
-
-```
-Menu → [4] Purchase → MED-01 (Aspirin)   ← Note current stock level
+Menu → [4] Purchase → MED-01 (Aspirin)
 Menu → [5] Undo Last Transaction
 ```
+✅ **SUCCESS** — Stock and payment are atomically restored via the Command pattern.
 
-The Command pattern stores the complete state of the transaction — payment authorization, inventory delta, and timestamp — as a reversible command object. A single `undo()` call atomically restores both the payment and the stock count to their pre-purchase state, with no partial rollbacks.
-
----
-
-### Scenario 4 — Emergency Mode & Graceful Degradation
-
+### Scenario 4 — Emergency Mode
 ```
 Menu → [6] Toggle Emergency Mode
-Menu → [2] Upgrade → [3] Network Unit     ← Observe: OFFLINE status
-Menu → [4] Purchase → MED-01 with UPI
+Menu → [4] Purchase → MED-01 (Quantity: 5)
 ```
-
-Two simultaneous restrictions activate:
-
-| Restriction | Enforced By | Behaviour |
-|:---|:---|:---|
-| UPI / digital payments blocked | Proxy (Security Layer) | Transaction rejected at the access layer |
-| Purchase quantity capped at 2 units | Proxy (Safety Layer) | Enforced before reaching inventory |
-
-The Singleton ensures this emergency state propagates consistently to all kiosk instances across the city. The Network Unit going offline is surfaced by the Decorator wrapping state, not the core kiosk logic.
+⚠️ **CAPPED** — Quantity is restricted to 2 units for essential items during emergencies.
 
 ---
 
 ## Project Structure
 
 ```
-aura-retail-os/
-│
+Aura-Retail-OS/
 ├── simulation.py          # Entry point — main simulation loop & CLI menu
-│
-├── patterns/
-│   ├── factory.py         # Abstract Factory — kiosk + hardware provisioning
-│   ├── bridge.py          # Hardware HAL — dispenser abstraction layer
-│   ├── decorator.py       # Runtime hardware module attachments
-│   ├── composite.py       # Inventory product tree (items + bundles)
-│   ├── proxy.py           # Role-based access & emergency enforcement
-│   ├── adapter.py         # Unified payment gateway (UPI, CC, Wallet)
-│   ├── command.py         # Transaction commands + undo stack
-│   ├── facade.py          # KioskInterface — simplified public API
-│   └── singleton.py       # CityRegistry — global emergency state
-│
-└── docs/
-    └── project_report.pdf # Full UML diagrams & technical specification
+├── core/
+│   ├── central_registry.py# Singleton — global city state
+│   ├── kiosk.py           # Facade & Kiosk base classes
+│   ├── kiosk_factory.py   # Abstract Factory implementation
+│   ├── commands.py        # Command pattern — purchase/undo logic
+│   └── pricing.py         # Strategy pattern — pricing models
+├── hardware/
+│   ├── dispenser.py       # Bridge — hardware motors
+│   └── modules.py         # Decorator — optional modules
+├── inventory/
+│   ├── product.py         # Composite & Proxy implementation
+│   └── inventory_manager.py# Core inventory store
+├── payment/
+│   ├── adapters.py        # Payment Adapters (UPI, CC, Wallet)
+│   └── payment_processor.py# Incompatible legacy SDK targets
+├── persistence/
+│   ├── inventory.json     # Saved stock state
+│   ├── config.json        # Saved system configuration
+│   └── transactions.csv   # Audit trail of all commands
+└── TESTING_GUIDE.md       # Step-by-step validation guide
 ```
 
 ---
