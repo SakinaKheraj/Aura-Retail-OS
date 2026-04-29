@@ -1,4 +1,7 @@
-# STATUS: Complete (Final Submission)
+# ============================================================
+# FILE: core/commands.py
+# MEMBER: Sakina [202512046]
+# PATTERN: Command
 # ============================================================
 
 import time
@@ -22,7 +25,7 @@ from persistence.persistence_manager import PersistenceManager
 #   PurchaseItemCommand, RefundCommand, RestockCommand ← concrete
 #   CommandInvoker   ← stores and executes commands
 #
-# TODO (Final Submission):
+# TODO :
 # - implement execute() for all concrete commands with real logic
 # - implement undo() for rollback support
 # - CommandInvoker maintains full undo stack
@@ -72,12 +75,41 @@ class PurchaseItemCommand(Command):
             print(f"  [Command] Error: Product '{self.product_id}' not found.")
             return False
 
+        # ── Constraint: Network Connectivity for Digital Payments ──
+        if not self.kiosk.is_online():
+            from payment.adapters import UPIAdapter, WalletAdapter
+            if isinstance(self.kiosk.payment_gateway, (UPIAdapter, WalletAdapter)):
+                print(f"  [SECURITY] OFFLINE: Digital payment requires network connectivity. Please use physical card.")
+                return False
+
         available = proxy.get_available_stock(self.product_id)
         if available < self.quantity:
             print(f"  [Command] Error: Insufficient stock ({available} available).")
             return False
 
-        self._total_amount = item.get_price() * self.quantity
+        # ── Constraint: Hardware Dependency (Refrigeration) ──
+        if getattr(item, 'requires_refrigeration', False):
+            if "Refrigeration" not in self.kiosk.get_status():
+                print(f"  [SAFETY] DENIED — '{item.get_name()}' requires refrigeration, but NO COOLING MODULE is attached.")
+                return False
+            else:
+                print(f"  [SAFETY] Temperature Check: OK")
+
+        # ── Constraint: Emergency Mode Limits ──
+        from core.central_registry import CentralRegistry
+        if CentralRegistry().get_system_status() == "EMERGENCY":
+            if getattr(item, 'is_essential', False) and self.quantity > 2:
+                print(f"  [EMERGENCY LIMIT] Maximum 2 units per transaction for essential items during emergency mode.")
+                print(f"                    Adjusting quantity to 2.")
+                self.quantity = 2
+
+        # ── Path B: Dynamic Pricing Policy (Strategy Pattern) ──
+        from core.pricing import StandardPricing, EmergencyPricing
+        policy = StandardPricing()
+        if CentralRegistry().get_system_status() == "EMERGENCY":
+            policy = EmergencyPricing()
+
+        self._total_amount = policy.compute_price(item.get_price(), self.quantity)
         
         # Payment
         if self.kiosk.payment_gateway.process_payment(self.user_id, self._total_amount):

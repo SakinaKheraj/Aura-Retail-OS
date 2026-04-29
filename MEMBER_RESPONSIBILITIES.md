@@ -39,6 +39,7 @@
 - Implemented Adapters for UPI, Credit Card, and Digital Wallet APIs, unifying three incompatible vendor interfaces behind a single `PaymentGateway`. Adding a new payment method requires only a new adapter.
 - Developed the Command pattern for transactions — each purchase is a self-contained, reversible object encapsulating payment, inventory change, and dispenser action.
 - Engineered the multi-level undo and rollback mechanism: a single `undo()` call atomically reverts both payment and stock, with no partial states.
+- Implemented the **Strategy Pattern** for dynamic pricing, allowing the system to switch between Standard and Emergency pricing models at runtime.
 - Built the CSV-based audit trail logging every command execution and rollback.
 
 ---
@@ -50,4 +51,4 @@
 | Kalagi | Abstract Factory | Facade | Singleton |
 | Digvijay | — | Composite, Proxy | — |
 | Aayushi | — | Bridge, Decorator | — |
-| Sakina | — | Adapter | Command |
+| Sakina | — | Adapter | Command, Strategy |
