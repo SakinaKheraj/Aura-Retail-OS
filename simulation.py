@@ -1,3 +1,4 @@
+
 """
 ================================================================
   Aura Retail OS — Interactive CLI
@@ -65,7 +66,7 @@ def aura_banner():
 # ================================================================
 
 class AuraApp:
-    def __init__(self):
+    def _init_(self):
         self.registry = CentralRegistry()
         self.kiosk = None
         self.facade = None
@@ -82,9 +83,9 @@ class AuraApp:
         mgr = self.kiosk.inventory_manager._manager
         
         # Products
-        med1 = Product("MED-01", "Aspirin 100mg", price=50.0, quantity=100)
-        med2 = Product("MED-02", "Gauze Bandage", price=120.0, quantity=50)
-        med3 = Product("MED-03", "Insulin Vial", price=2500.0, quantity=10)
+        med1 = Product("MED-01", "Aspirin 100mg", price=50.0, quantity=100, is_essential=True)
+        med2 = Product("MED-02", "Gauze Bandage", price=120.0, quantity=50, is_essential=True)
+        med3 = Product("MED-03", "Insulin Vial", price=2500.0, quantity=10, requires_refrigeration=True)
         
         # Bundle (Composite)
         bundle = ProductBundle("BND-01", "Emergency Relief Kit")
@@ -133,12 +134,27 @@ class AuraApp:
         
         choice = input(f"\n {Style.BOLD}Select Module [1-3]: {Style.RESET}")
         
+        from hardware.modules import KioskWithModule, RefrigerationModule, NetworkModule
+        
         if choice == "1":
             self.kiosk = KioskWithModule(self.kiosk, RefrigerationModule(temperature_celsius=2.0))
-            self.facade = KioskInterface(self.kiosk) # Re-wrap if needed
+            self.facade.update_kiosk_ref(self.kiosk)
             print_success("Refrigeration module attached via Decorator Pattern.")
+        elif choice == "3":
+            self.kiosk = KioskWithModule(self.kiosk, NetworkModule())
+            self.facade.update_kiosk_ref(self.kiosk)
+            print_success("Network Unit attached. UPI now enabled.")
         else:
             print_info("Module skeleton attached.")
+
+    def toggle_emergency(self):
+        current = self.registry.get_system_status()
+        new_status = "EMERGENCY" if current != "EMERGENCY" else "ACTIVE"
+        self.registry.set_system_status(new_status)
+        if new_status == "EMERGENCY":
+            print_error("SYSTEM IN EMERGENCY MODE — Purchase limits enforced.")
+        else:
+            print_success("System returned to ACTIVE mode.")
 
     def show_inventory(self):
         if not self.kiosk: return
@@ -165,10 +181,16 @@ class AuraApp:
         print(" 3. Digital Wallet")
         p_choice = input(f" Choice [1-3]: ")
         
-        if p_choice == "2":
+        if p_choice == "1":
+            from payment.adapters import UPIAdapter
+            self.kiosk.payment_gateway = UPIAdapter("aura_user@upi")
+            print_info("Payment Adapter swapped to UPI (Default).")
+        elif p_choice == "2":
+            from payment.adapters import CreditCardAdapter
             self.kiosk.payment_gateway = CreditCardAdapter("4111-XXXX-XXXX-1111")
             print_info("Payment Adapter swapped to Credit Card.")
         elif p_choice == "3":
+            from payment.adapters import WalletAdapter
             self.kiosk.payment_gateway = WalletAdapter("aura_user_88")
             print_info("Payment Adapter swapped to Digital Wallet.")
             
@@ -185,7 +207,9 @@ class AuraApp:
             print(f" [{Style.CYAN}2{Style.RESET}] Upgrade Hardware Modules")
             print(f" [{Style.CYAN}3{Style.RESET}] View Inventory Tree")
             print(f" [{Style.CYAN}4{Style.RESET}] Purchase Item")
-            print(f" [{Style.CYAN}5{Style.RESET}] System Diagnostics")
+            print(f" [{Style.CYAN}5{Style.RESET}] Undo Last Transaction")
+            print(f" [{Style.CYAN}6{Style.RESET}] Toggle Emergency Mode")
+            print(f" [{Style.CYAN}7{Style.RESET}] System Diagnostics")
             print(f" [{Style.CYAN}0{Style.RESET}] Shutdown System")
             
             choice = input(f"\n {Style.BOLD}Choice > {Style.RESET}")
@@ -194,7 +218,11 @@ class AuraApp:
             elif choice == "2": self.add_module()
             elif choice == "3": self.show_inventory()
             elif choice == "4": self.run_purchase()
-            elif choice == "5": 
+            elif choice == "5":
+                if self.facade: self.facade.undo_last_operation()
+                else: print_error("Initialize kiosk first.")
+            elif choice == "6": self.toggle_emergency()
+            elif choice == "7": 
                 if self.facade: self.facade.run_diagnostics()
                 else: print_error("Initialize kiosk first.")
             elif choice == "0":
@@ -206,7 +234,7 @@ class AuraApp:
                 print_error("Invalid selection.")
 
 # ================================================================
-if __name__ == "__main__":
+if _name_ == "_main_":
     app = AuraApp()
     try:
         app.main_loop()
