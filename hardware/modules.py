@@ -2,7 +2,6 @@
 # FILE: hardware/modules.py
 # MEMBER: Aayushi [202512101]
 # PATTERN: Decorator (skeleton)
-# STATUS: Skeleton (Subtask 2)
 # ============================================================
 
 from abc import ABC, abstractmethod
@@ -28,7 +27,7 @@ from abc import ABC, abstractmethod
 #   kiosk = KioskWithModule(kiosk, NetworkModule())
 #   → each wrap adds another module without changing any class
 #
-# TODO (Final Submission):
+# TODO :
 # - Each module should raise events on failure
 #   (e.g. RefrigerationModule raises HardwareFailureEvent if temp too high)
 # - NetworkModule offline → restrict online payment methods
@@ -182,9 +181,11 @@ class NetworkModule(HardwareModule):
         self._connected = False # Testing offline behavior
 
     def attach(self, kiosk_id: str):
+        self._connected = True
         print(f"  [NetworkModule] Attached to '{kiosk_id}' — initializing 5G/LTE link...")
 
     def detach(self, kiosk_id: str):
+        self._connected = False
         print(f"  [NetworkModule] Dropping network link for '{kiosk_id}'")
 
     def get_module_name(self) -> str:

@@ -2,7 +2,6 @@
 # FILE: hardware/dispenser.py
 # MEMBER: Aayushi [202512101]
 # PATTERN: Bridge (skeleton)
-# STATUS: Skeleton (Subtask 2)
 # ============================================================
 
 from abc import ABC, abstractmethod
