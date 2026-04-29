@@ -2,7 +2,6 @@
 # FILE: payment/payment_processor.py
 # MEMBER: Sakina [202512046]
 # PATTERN: Adapter (FULLY IMPLEMENTED)
-# STATUS: Complete (Subtask 2)
 # ============================================================
 
 from abc import ABC, abstractmethod
