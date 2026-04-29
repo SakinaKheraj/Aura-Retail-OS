@@ -7,7 +7,6 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![OOP Patterns](https://img.shields.io/badge/Design%20Patterns-9%20Implemented-success?style=flat-square)](./docs/)
 [![colorama](https://img.shields.io/badge/Dependency-colorama-informational?style=flat-square)](https://pypi.org/project/colorama/)
-[![License](https://img.shields.io/badge/License-Academic-orange?style=flat-square)]()
 
 *Governing the kiosks of Zephyrus — one design pattern at a time.*
 
@@ -17,7 +16,7 @@
 
 ## 📺 Project Demonstration
 
-![Aura Retail OS Demo](file:///c:/Users/khera\OneDrive/Desktop/DAU/sem-2/OOP/Aura%20Retail%20OS/Aura-demo.mp4)
+https://github.com/user-attachments/assets/20d9cad9-31eb-46bb-9df0-8e51211b7e01
 
 ---
 
