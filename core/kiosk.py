@@ -24,7 +24,7 @@ class Kiosk(ABC):
     Abstract base for all kiosk types.
     """
 
-    def _init_(self, kiosk_id: str, location: str):
+    def __init__(self, kiosk_id: str, location: str):
         self.kiosk_id = kiosk_id
         self.location = location
         self.dispenser = None
@@ -78,8 +78,8 @@ class PharmacyKiosk(Kiosk):
     """
     Deployed in hospitals.
     """
-    def _init_(self, kiosk_id: str, location: str):
-        super()._init_(kiosk_id, location)
+    def __init__(self, kiosk_id: str, location: str):
+        super().__init__(kiosk_id, location)
         self.requires_prescription = True
 
     def get_status(self) -> str:
@@ -98,8 +98,8 @@ class EmergencyReliefKiosk(Kiosk):
     """
     Deployed in disaster zones.
     """
-    def _init_(self, kiosk_id: str, location: str):
-        super()._init_(kiosk_id, location)
+    def __init__(self, kiosk_id: str, location: str):
+        super().__init__(kiosk_id, location)
         self.emergency_limit = 2  # max items per user
 
     def get_status(self) -> str:
@@ -115,7 +115,7 @@ class KioskInterface:
     Facade — exposes a simplified interface to external systems.
     """
 
-    def _init_(self, kiosk: Kiosk):
+    def __init__(self, kiosk: Kiosk):
         self._kiosk = kiosk
         self._invoker = CommandInvoker()
         self._registry = CentralRegistry()
