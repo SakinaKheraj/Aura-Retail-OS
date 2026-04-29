@@ -1,8 +1,6 @@
 # ============================================================
 # FILE: inventory/product.py
 # MEMBER: Digvijay [202512008]
-# PATTERNS: Composite (FULLY IMPLEMENTED), Proxy (FULLY IMPLEMENTED)
-# STATUS: Complete (Subtask 2)
 # ============================================================
 
 from abc import ABC, abstractmethod
@@ -44,8 +42,11 @@ class ProductComponent(ABC):
         pass
 
     @abstractmethod
-    def get_quantity(self) -> int:
-        """Returns the available quantity (stock) of this component."""
+    def add_stock(self, quantity: int):
+        pass
+
+    @abstractmethod
+    def reduce_stock(self, quantity: int):
         pass
 
     @abstractmethod
@@ -77,9 +78,16 @@ class Product(ProductComponent):
     def get_quantity(self) -> int:
         return self.quantity
 
+    def add_stock(self, quantity: int):
+        self.quantity += quantity
+
+    def reduce_stock(self, quantity: int):
+        self.quantity -= quantity
+
     def display(self, indent: int = 0):
         pad = "    " * indent
-        print(f"{pad}└─ [Product] {self.name:<25} ₹{self.price:<8.2f} (Stock: {self.quantity})")
+        ref_tag = " [COLD]" if getattr(self, "requires_refrigeration", False) else ""
+        print(f"{pad}└─ [Product] {self.name + ref_tag:<25} ₹{self.price:<8.2f} (Stock: {self.quantity})")
 
 
 class ProductBundle(ProductComponent):
@@ -103,20 +111,22 @@ class ProductBundle(ProductComponent):
         return self.name
 
     def get_price(self) -> float:
-        """
-        Total price of the bundle is the sum of unit prices of its children.
-        This is a DERIVED ATTRIBUTE.
-        """
         return sum(item.get_price() for item in self._children)
 
     def get_quantity(self) -> int:
-        """
-        Availability of a bundle is limited by the minimum availability of its children.
-        Example: If a kit needs Insulin and we have 0 Insulin, the kit is unavailable.
-        """
         if not self._children:
             return 0
         return min(item.get_quantity() for item in self._children)
+
+    def add_stock(self, quantity: int):
+        """Restocking a bundle restocks every item in it."""
+        for item in self._children:
+            item.add_stock(quantity)
+
+    def reduce_stock(self, quantity: int):
+        """Purchasing a bundle reduces stock for every item in it."""
+        for item in self._children:
+            item.reduce_stock(quantity)
 
     def display(self, indent: int = 0):
         pad = "    " * indent
