@@ -66,7 +66,7 @@ def aura_banner():
 # ================================================================
 
 class AuraApp:
-    def _init_(self):
+    def __init__(self):
         self.registry = CentralRegistry()
         self.kiosk = None
         self.facade = None
@@ -234,7 +234,7 @@ class AuraApp:
                 print_error("Invalid selection.")
 
 # ================================================================
-if _name_ == "_main_":
+if __name__ == "__main__":
     app = AuraApp()
     try:
         app.main_loop()

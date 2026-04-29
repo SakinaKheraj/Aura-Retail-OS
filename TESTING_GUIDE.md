@@ -61,9 +61,10 @@ Run `python simulation.py` and follow each scenario in order. Each scenario targ
 
 **Expected output (step 2):**
 ```
-[CommandInvoker] Rolling back...
-[CreditCardAdapter] Refunding ₹50.00...
-[Inventory] Stock restored: MED-01 → 100
+[CommandInvoker] Undoing: PurchaseItemCommand(...)
+  [Command] Rolling back transaction TXN_...
+  [CreditCardAPI] Cancelling transaction TXN_...
+[InventoryProxy] LOGGED — add_stock('MED-01', 2) by role 'admin'
 ```
 
 **Pass condition:** Stock returns to its original value. Payment is refunded. No orphaned state remains.
@@ -74,24 +75,28 @@ Run `python simulation.py` and follow each scenario in order. Each scenario targ
 
 ## Scenario D — Network Failure & Payment Fallback (Adapter)
 
-**Goal:** Confirm that individual payment adapters respond correctly to network status, and that a fallback adapter works independently.
+**Goal:** Confirm that digital payment adapters require network connectivity and that the system allows fallback to physical cards.
 
 **Steps:**
-1. Select `[2] Upgrade` → `[3] Network Unit` — note it initializes as OFFLINE
-2. Select `[4] Purchase` → payment method `[1] UPI`
-3. Observe the block.
-4. Retry with payment method `[2] Credit Card`
+1. Select `[4] Purchase` → payment method `[1] UPI`.
+2. Observe the block (Kiosks are offline by default).
+3. Select `[2] Upgrade` → `[3] Network Unit`.
+4. Select `[4] Purchase` → payment method `[1] UPI` again.
 
 **Expected output (step 2):**
 ```
-[SECURITY] OFFLINE — UPI payment unavailable. Please use physical card or cash.
+[SECURITY] OFFLINE: Digital payment requires network connectivity. Please use physical card or cash.
 ```
 
-**Expected output (step 4):** Purchase completes successfully.
+**Expected output (step 4):**
+```
+[UPIAdapter] Transaction ID: UPI_...
+[Command] Purchase successful.
+```
 
-**Pass condition:** UPI is blocked; Credit Card succeeds. Each adapter independently checks system state — the gateway interface is identical for both.
+**Pass condition:** Digital payments are blocked by default and enabled only after the Network Unit is attached.
 
-**Pattern verified:** Adapter
+**Pattern verified:** Adapter, Decorator (Connectivity capability)
 
 ---
 
@@ -105,7 +110,11 @@ Run `python simulation.py` and follow each scenario in order. Each scenario targ
 
 **Expected output:**
 ```
-[EMERGENCY LIMIT] Maximum 2 units per transaction during emergency mode.
+[CentralRegistry] Status → EMERGENCY
+ [!] SYSTEM IN EMERGENCY MODE — Purchase limits enforced.
+...
+  [KioskInterface] EMERGENCY LIMIT! Max 2 essential units per user.
+  [PRICING] Emergency Strategy Applied (+50% surcharge)
 ```
 
 **Pass condition:** Quantity is capped at 2 regardless of input. The limit is enforced by the Proxy before the request reaches inventory. The Singleton ensures this state is consistent across all kiosk instances.
@@ -123,14 +132,37 @@ Run `python simulation.py` and follow each scenario in order. Each scenario targ
 
 **Expected output:**
 ```
-[Diagnostics] Dispenser:  OK
-[Diagnostics] Inventory:  OK
-[Diagnostics] Payment:    OK
+[KioskInterface] Initiating System Diagnostics for K-1001...
+  - Dispenser: ONLINE
+  - Inventory: ONLINE
+  - Payment:   ONLINE
+[Diagnostics Result] Kiosk 'K-1001' is HEALTHY.
 ```
 
 **Pass condition:** All three subsystems are reported in one call. No internal subsystem logic is exposed to the caller.
 
 **Pattern verified:** Facade
+
+---
+
+## Scenario G — Synchronized Stock (Composite Bundle)
+
+**Goal:** Confirm that purchasing a bundle correctly reduces the stock of all its individual components.
+
+**Steps:**
+1. Select `[3] View Inventory` — note the stock of `MED-01`, `MED-02`, and `MED-03`.
+2. Select `[4] Purchase` → `BND-01 (Emergency Relief Kit)`
+3. Select `[3] View Inventory` again.
+
+**Expected output:**
+```
+[InventoryProxy] Stock reduced — 'BND-01' by 1
+[InventoryManager] Saved to 'persistence/inventory.json'
+```
+
+**Pass condition:** The stock for `MED-01`, `MED-02`, and `MED-03` has all decreased by 1, even though you only purchased `BND-01`. The Composite pattern ensures the reduction propagates to all leaf nodes.
+
+**Pattern verified:** Composite
 
 ---
 
@@ -141,6 +173,7 @@ Run `python simulation.py` and follow each scenario in order. Each scenario targ
 | A | Abstract Factory | Correct dispenser auto-selected at boot |
 | B | Bridge, Decorator | Purchase blocked without module; passes after attachment |
 | C | Command | Full rollback restores both payment and stock |
-| D | Adapter | UPI blocked offline; Credit Card succeeds independently |
+| D | Adapter, Decorator | Digital blocked offline; enabled after Network Unit upgrade |
 | E | Singleton, Proxy | Quantity capped at 2 under emergency mode |
 | F | Facade | Single call returns health status of all subsystems |
+| G | Composite | Buying a bundle reduces stock of all its parts |
