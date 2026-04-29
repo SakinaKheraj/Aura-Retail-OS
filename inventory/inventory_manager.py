@@ -1,7 +1,7 @@
 # ============================================================
 # FILE: inventory/inventory_manager.py
 # MEMBER: Digvijay [202512008]
-# STATUS: Complete (Subtask 2)
+
 # ============================================================
 
 import json
@@ -60,14 +60,14 @@ class InventoryManager:
     def add_stock(self, product_id: str, quantity: int):
         """Increase stock for a product (restock operation)."""
         if product_id in self._products:
-            self._products[product_id].quantity += quantity
+            self._products[product_id].add_stock(quantity)
         else:
             print(f"[InventoryManager] WARNING: '{product_id}' not found — cannot restock.")
 
     def reduce_stock(self, product_id: str, quantity: int):
         """Decrease stock after a confirmed purchase."""
         if product_id in self._products:
-            self._products[product_id].quantity -= quantity
+            self._products[product_id].reduce_stock(quantity)
         else:
             print(f"[InventoryManager] WARNING: '{product_id}' not found — cannot reduce stock.")
 
