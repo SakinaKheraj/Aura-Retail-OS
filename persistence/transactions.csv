@@ -1,5 +1,3 @@
-filename: persistence/transactions.csv
-
 transaction_id,product_id,quantity,amount,status,timestamp
 TXN_1776883912,MED-01,2,100.0,SUCCESS,2026-04-23T00:21:52.344132
 TXN_1776883977,MED-01,5,250.0,SUCCESS,2026-04-23T00:22:57.804519
