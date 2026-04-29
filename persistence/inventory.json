@@ -1,8 +1,10 @@
+filename: persistence/inventory.json
+
 {
   "MED-01": {
     "name": "Aspirin 100mg",
     "price": 50.0,
-    "quantity": 100,
+    "quantity": 90,
     "requires_refrigeration": false,
     "is_essential": true
   },
