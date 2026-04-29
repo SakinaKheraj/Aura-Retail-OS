@@ -2,7 +2,6 @@
 # FILE: core/kiosk_factory.py
 # MEMBER: Kalagi [202512037]
 # PATTERN: Abstract Factory (skeleton)
-# STATUS: Skeleton (Subtask 2)
 # ============================================================
 
 from abc import ABC, abstractmethod

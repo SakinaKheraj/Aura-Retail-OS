@@ -2,7 +2,6 @@
 # FILE: core/kiosk.py
 # MEMBER: Kalagi [202512037]
 # PATTERNS: Abstract Factory (base classes), Facade (KioskInterface)
-# STATUS: Skeleton (Subtask 2)
 # ============================================================
 
 import time
@@ -25,7 +24,7 @@ class Kiosk(ABC):
     Abstract base for all kiosk types.
     """
 
-    def __init__(self, kiosk_id: str, location: str):
+    def _init_(self, kiosk_id: str, location: str):
         self.kiosk_id = kiosk_id
         self.location = location
         self.dispenser = None
@@ -45,10 +44,10 @@ class Kiosk(ABC):
         return False
 
     def is_online(self) -> bool:
-        """Default True. Overridden by Network Module."""
-        return True
+        """Default False for Modular Hardware. Overridden by Network Module."""
+        return False
 
-    # ✅ SAFE IMPROVEMENT HERE
+    # SAFE IMPROVEMENT HERE
     def set_mode(self, mode: str):
         valid_modes = {"ACTIVE", "POWER_SAVING", "MAINTENANCE", "EMERGENCY"}
 
@@ -79,8 +78,8 @@ class PharmacyKiosk(Kiosk):
     """
     Deployed in hospitals.
     """
-    def __init__(self, kiosk_id: str, location: str):
-        super().__init__(kiosk_id, location)
+    def _init_(self, kiosk_id: str, location: str):
+        super()._init_(kiosk_id, location)
         self.requires_prescription = True
 
     def get_status(self) -> str:
@@ -99,8 +98,8 @@ class EmergencyReliefKiosk(Kiosk):
     """
     Deployed in disaster zones.
     """
-    def __init__(self, kiosk_id: str, location: str):
-        super().__init__(kiosk_id, location)
+    def _init_(self, kiosk_id: str, location: str):
+        super()._init_(kiosk_id, location)
         self.emergency_limit = 2  # max items per user
 
     def get_status(self) -> str:
@@ -116,10 +115,13 @@ class KioskInterface:
     Facade — exposes a simplified interface to external systems.
     """
 
-    def __init__(self, kiosk: Kiosk):
+    def _init_(self, kiosk: Kiosk):
         self._kiosk = kiosk
         self._invoker = CommandInvoker()
         self._registry = CentralRegistry()
+
+    def update_kiosk_ref(self, new_kiosk: Kiosk):
+        self._kiosk = new_kiosk
 
     def purchase_item(self, product_id: str, quantity: int, user_id: str) -> bool:
         """
@@ -142,11 +144,7 @@ class KioskInterface:
             print("  [KioskInterface] System SHUTDOWN. No transactions possible.")
             return False
 
-        if self._kiosk.mode == "MAINTENANCE":
-            print("  [KioskInterface] Kiosk in MAINTENANCE mode. Please wait.")
-            return False
-
-        # Mode-specific logic (Emergency Limit for Essentials)
+        # ── Mode-specific logic (Emergency Limit for Essentials) ──
         if self._registry.get("emergency_mode"):
             if isinstance(self._kiosk, EmergencyReliefKiosk) or getattr(item, "is_essential", False):
                 if quantity > getattr(self._kiosk, "emergency_limit", 2):
@@ -154,11 +152,21 @@ class KioskInterface:
                     print(f"  [KioskInterface] EMERGENCY LIMIT! Max {actual_limit} essential units per user.")
                     quantity = actual_limit
 
+        # ── Path B: Dynamic Pricing Policy (Strategy Pattern) ──
+        from core.pricing import StandardPricing, EmergencyPricing
+        policy = StandardPricing()
+        if self._registry.get_system_status() == "EMERGENCY":
+            policy = EmergencyPricing()
+            print(f"  [PRICING] Emergency Strategy Applied (+50% surcharge)")
+        
+        total_price = policy.compute_price(item.get_price(), quantity)
+        print(f"  [Kiosk] Computed Price: ₹{total_price:.2f} for {quantity}x {item.get_name()}")
+
         # Path B Constraint: Hardware Dependency (Network)
         if not self._kiosk.is_online():
-            from payment.adapters import UPIAdapter
-            if isinstance(self._kiosk.payment_gateway, UPIAdapter):
-                print(f"\033[93m  [SECURITY] OFFLINE: UPI payment unavailable. Please use physical card or cash.\033[0m")
+            from payment.adapters import UPIAdapter, WalletAdapter
+            if isinstance(self._kiosk.payment_gateway, (UPIAdapter, WalletAdapter)):
+                print(f"\033[93m  [SECURITY] OFFLINE: Digital payment requires network connectivity. Please use physical card or cash.\033[0m")
                 return False
 
         if isinstance(self._kiosk, PharmacyKiosk):
