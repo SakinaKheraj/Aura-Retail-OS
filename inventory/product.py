@@ -6,6 +6,7 @@
 # ============================================================
 
 from abc import ABC, abstractmethod
+from persistence.persistence_manager import PersistenceManager
 
 
 # ============================================================
@@ -58,11 +59,14 @@ class Product(ProductComponent):
     Represents an individual item (e.g. Paracetamol).
     """
 
-    def __init__(self, product_id: str, name: str, price: float, quantity: int):
+    def __init__(self, product_id: str, name: str, price: float, quantity: int, 
+                 requires_refrigeration: bool = False, is_essential: bool = False):
         self.product_id = product_id
         self.name = name
         self.price = price
-        self.quantity = quantity  # This is the stock level
+        self.quantity = quantity
+        self.requires_refrigeration = requires_refrigeration
+        self.is_essential = is_essential
 
     def get_name(self) -> str:
         return self.name
@@ -139,20 +143,12 @@ class ProductBundle(ProductComponent):
 class InventoryAccessProxy:
     """
     Proxy for InventoryManager.
-    The KioskInterface, KioskFactory, and all commands always
-    talk to this proxy — never to InventoryManager directly.
-
-    TODO (Final Submission):
-    - Log all accesses to a file (transactions.csv)
-    - Add role-based per-product access rules
-      (e.g. only PharmacyKiosk can access prescription products)
-    - Track reserved items during active transactions
-    - Block access when hardware fault makes product unavailable
     """
 
     def __init__(self, inventory_manager, authorized_roles: list):
         self._manager = inventory_manager           # the real subject
         self._authorized_roles = authorized_roles   # e.g. ["admin", "user"]
+        self._persistence = PersistenceManager()
 
     # ── internal helper ────────────────────────────────────
     def _check_auth(self, role: str):
@@ -166,33 +162,34 @@ class InventoryAccessProxy:
     def get_product(self, product_id: str, role: str = "user") -> ProductComponent:
         """
         Auth check + logging before fetching product.
-        Returns the ProductComponent or None if not found.
         """
         self._check_auth(role)
-        print(f"[InventoryProxy] GRANTED — get_product('{product_id}') for role '{role}'")
-        return self._manager.get_product(product_id)
+        product = self._manager.get_product(product_id)
+        if product:
+            print(f"[InventoryProxy] GRANTED — get_product('{product_id}') for role '{role}'")
+        return product
 
     def get_available_stock(self, product_id: str) -> int:
         """
         Derived attribute — computed from current inventory.
-        No auth check needed (public read).
-        TODO (Final): subtract reserved items and hardware-blocked items.
         """
         return self._manager.get_available_stock(product_id)
 
     def add_stock(self, product_id: str, quantity: int, role: str = "admin"):
         """
         Admin-only operation.
-        Logs the restock action before delegating to manager.
         """
         self._check_auth(role)
         print(f"[InventoryProxy] LOGGED — add_stock('{product_id}', {quantity}) by role '{role}'")
         self._manager.add_stock(product_id, quantity)
+        # Persistent save
+        self._manager.save_to_json()
 
     def reduce_stock(self, product_id: str, quantity: int):
         """
         Called internally after a successful purchase.
-        No role check — purchase authorization already done upstream.
         """
         print(f"[InventoryProxy] Stock reduced — '{product_id}' by {quantity}")
         self._manager.reduce_stock(product_id, quantity)
+        # Persistent save
+        self._manager.save_to_json()

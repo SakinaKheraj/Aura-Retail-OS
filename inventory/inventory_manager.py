@@ -89,7 +89,9 @@ class InventoryManager:
             data[pid] = {
                 "name": p.get_name(),
                 "price": p.get_price(),
-                "quantity": p.get_quantity()
+                "quantity": p.get_quantity(),
+                "requires_refrigeration": getattr(p, "requires_refrigeration", False),
+                "is_essential": getattr(p, "is_essential", False)
             }
         with open(filepath, "w") as f:
             json.dump(data, f, indent=2)
@@ -97,8 +99,24 @@ class InventoryManager:
 
     def load_from_json(self, filepath: str = "persistence/inventory.json"):
         """
-        TODO (Final Submission):
         Restore inventory from JSON on kiosk startup.
-        Will need to reconstruct Product objects from saved data.
         """
-        pass  # skeleton — implement in Final Submission
+        if not os.path.exists(filepath):
+            print(f"[InventoryManager] No saved inventory found at '{filepath}'. Starting empty.")
+            return
+
+        with open(filepath, "r") as f:
+            data = json.load(f)
+        
+        from .product import Product
+        for pid, info in data.items():
+            prod = Product(
+                pid, 
+                info["name"], 
+                info["price"], 
+                info["quantity"], 
+                info.get("requires_refrigeration", False),
+                info.get("is_essential", False)
+            )
+            self.add_product(prod)
+        print(f"[InventoryManager] Restored {len(data)} products from '{filepath}'")
